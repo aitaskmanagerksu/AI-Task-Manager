@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Task Manager</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .task-container { max-width: 600px; margin: auto; }
+        .task-list { margin-top: 20px; }
+        .task { padding: 10px; border: 1px solid #ccc; margin-bottom: 5px; }
+        .chat-container { max-width: 600px; margin: auto; margin-top: 20px; }
+        .chat-box { border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: auto; white-space: pre-line; }
+        .chat-input { width: 100%; padding: 10px; margin-top: 10px; }
+        .user-message { text-align: right; font-weight: bold; }
+        .ai-message { text-align: left; font-weight: normal; white-space: pre-line; }
+        .button-container { text-align: center; margin-top: 10px; }
+        .command-button { margin: 5px; padding: 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="task-container">
+        <h2>AI Task Manager</h2>
+        <div class="task-list" id="taskList"></div>
+    </div>
+    
+    <div class="chat-container">
+        <h3>AI Assistant</h3>
+        <div class="chat-box" id="chatBox"></div>
+        <input type="text" id="chatInput" class="chat-input" placeholder="Ask the AI...">
+        <div class="button-container">
+            <button class="command-button" onclick="fillCommand('Create class [Class Name] [Hex Color]')">Create Class</button>
+            <button class="command-button" onclick="fillCommand('Add task [Class] [Task Name] [MM/DD/YYYY]')">Add Task</button>
+            <button class="command-button" onclick="fillCommand('Next task')">Next Task</button>
+            <button class="command-button" onclick="fillCommand('Suggest schedule')">Suggest Schedule</button>
+            <button class="command-button" onclick="fillCommand('Progress')">Progress</button>
+            <button class="command-button" onclick="fillCommand('List classes')">List Classes</button>
+            <button class="command-button" onclick="fillCommand('Remove class [Class Name]')">Remove Class</button>
+        </div>
+    </div>
+    
+    <script>
+        let tasks = [];
+        let classColors = {};
+
+        function displayTasks() {
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = '';
+            tasks.sort((a, b) => a.deadline - b.deadline);
+            tasks.forEach(task => {
+                const taskElement = document.createElement('div');
+                taskElement.className = 'task';
+                taskElement.textContent = `${task.name} - Due: ${(task.deadline.getMonth()+1)}/${task.deadline.getDate()}/${task.deadline.getFullYear()}`;
+                taskElement.style.backgroundColor = classColors[task.className] || "#FFFFFF";
+                taskList.appendChild(taskElement);
+            });
+        }
+
+        function fillCommand(command) {
+            document.getElementById('chatInput').value = command;
+        }
+
+        function addChatMessage(sender, message, className) {
+            const chatBox = document.getElementById('chatBox');
+            const messageElement = document.createElement('div');
+            messageElement.className = className;
+            messageElement.innerHTML = `${sender}: ${message.replace(/\n/g, '<br>')}`;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function handleChatResponse(userInput) {
+            let response = "I'm not sure how to respond to that.";
+            const words = userInput.split(" ");
+            
+            if (userInput.toLowerCase().startsWith("create class")) {
+                const color = words.pop();
+                const className = words.slice(2).join(" ");
+                if (className && /^#[0-9A-Fa-f]{6}$/.test(color)) {
+                    classColors[className] = color;
+                    response = `Class '${className}' created with color ${color}.`;
+                } else {
+                    response = "Please specify the class name and a valid hex color: 'Create class [Class Name] [Hex Color]'.";
+                }
+            } else if (userInput.toLowerCase().startsWith("add task")) {
+                const parts = userInput.split(" ").slice(2);
+                const className = parts.shift();
+                const date = new Date(parts.pop());
+                const taskName = parts.join(" ");
+                if (classColors[className] && taskName && !isNaN(date)) {
+                    tasks.push({ className, name: taskName, deadline: date });
+                    response = `Task '${taskName}' added to class '${className}' with a due date of ${date.toLocaleDateString()}.`;
+                } else {
+                    response = "Please use the correct format: 'Add task [Class] [Task Name] [MM/DD/YYYY]'.";
+                }
+            } else if (userInput.toLowerCase() === "next task") {
+                tasks.sort((a, b) => a.deadline - b.deadline);
+                response = tasks.length ? `Next task: '${tasks[0].name}' due on ${tasks[0].deadline.toLocaleDateString()}.` : "No tasks available.";
+            } else if (userInput.toLowerCase() === "suggest schedule") {
+                tasks.sort((a, b) => a.deadline - b.deadline);
+                response = tasks.length ? "Suggested schedule:\n" + tasks.map(t => `- ${t.name}: ${t.deadline.toLocaleDateString()}`).join("\n") : "No tasks to schedule.";
+            } else if (userInput.toLowerCase() === "progress") {
+                response = `You have completed 0 of ${tasks.length} tasks. Progress tracking will be updated soon.`;
+            } else if (userInput.toLowerCase() === "list classes") {
+                response = Object.keys(classColors).length ? "Your classes:<br>" + Object.keys(classColors).map(c => `<span style='color:${classColors[c]};'>- ${c}</span>`).join("<br>") : "No classes available.";
+            }
+            addChatMessage('AI', response, 'ai-message');
+        }
+
+        window.onload = function() {
+            const startupMessage = `Welcome to AI Task Manager!\n\nAvailable commands:\n- Create class [Class Name] [Hex Color]\n- Add task [Class] [Task Name] [MM/DD/YYYY]\n- Next task\n- Suggest schedule\n- Progress\n- List classes\n- Remove class [Class Name]`;
+            addChatMessage('AI', startupMessage, 'ai-message');
+        };
+    </script>
+</body>
+</html>
